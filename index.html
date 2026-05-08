@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project S.T.A.P.L.R. Command Center</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="loading-screen" id="loadingScreen" hidden>
+      <img src="assets/staplr-logo.png" alt="" />
+      <strong>Loading Project S.T.A.P.L.R.</strong>
+    </div>
+
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Project S.T.A.P.L.R. navigation">
+        <a class="brand" href="#dashboard" aria-label="Project S.T.A.P.L.R. home" data-page-link="dashboard">
+          <img src="assets/staplr-logo.png" alt="" />
+          <span>
+            <strong>Project S.T.A.P.L.R.</strong>
+            <small>Society for Technology Augmentation, Prototyping, Language, and Robotics</small>
+          </span>
+        </a>
+
+        <nav class="nav-list" aria-label="Main sections">
+          <button class="active" type="button" data-page-link="dashboard">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-5H4v5Zm10-11h6V4h-6v5Z" /></svg>
+            Dashboard
+          </button>
+          <button type="button" data-page-link="projects">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-13Zm3 2V9h10V7.5H7Zm0 4V13h10v-1.5H7Zm0 4V17h7v-1.5H7Z" /></svg>
+            Projects
+          </button>
+          <button type="button" data-page-link="funding">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 5.02 3 7.5v9C3 18.98 7.03 21 12 21s9-2.02 9-4.5v-9C21 5.02 16.97 3 12 3Zm0 2c4.28 0 7 1.48 7 2.5S16.28 10 12 10 5 8.52 5 7.5 7.72 5 12 5Zm7 6.2c-1.58 1.1-4.1 1.8-7 1.8s-5.42-.7-7-1.8v2.3c0 1.02 2.72 2.5 7 2.5s7-1.48 7-2.5v-2.3Zm0 5c-1.58 1.1-4.1 1.8-7 1.8s-5.42-.7-7-1.8v.3C5 17.52 7.72 19 12 19s7-1.48 7-2.5v-.3Z" /></svg>
+            Funding
+          </button>
+          <button type="button" data-page-link="timeline">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 2h2v2h6V2h2v2h2.5A2.5 2.5 0 0 1 22 6.5v12a2.5 2.5 0 0 1-2.5 2.5h-15A2.5 2.5 0 0 1 2 18.5v-12A2.5 2.5 0 0 1 4.5 4H7V2Zm13 8H4v8.5c0 .28.22.5.5.5h15a.5.5 0 0 0 .5-.5V10ZM4.5 6a.5.5 0 0 0-.5.5V8h16V6.5a.5.5 0 0 0-.5-.5h-15Z" /></svg>
+            Timeline
+          </button>
+          <button type="button" data-page-link="globalChat">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4h16v11H7.8L4 18.8V4Zm2 2v8l1-1h11V6H6Zm3 12h9l2 2v-9h2v13.8L17.2 20H9v-2Z" /></svg>
+            Global Chat
+          </button>
+          <button type="button" data-admin-open hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.05 3.41 9.76 8 11 4.59-1.24 8-5.95 8-11V5l-8-3Zm0 2.15L18 6.4V11c0 4.05-2.49 7.82-6 8.9-3.51-1.08-6-4.85-6-8.9V6.4l6-2.25Zm-1 4.85h2v4h-2V9Zm0 6h2v2h-2v-2Z" /></svg>
+            Admin
+          </button>
+        </nav>
+
+        <section class="side-note" aria-label="Signed in status">
+          <span class="status-dot"></span>
+          <div>
+            <strong id="sessionName">Signed out</strong>
+            <small id="sessionRole">Log in to view the dashboard</small>
+          </div>
+        </section>
+      </aside>
+
+      <main class="main-panel">
+        <section class="auth-panel" id="authPanel" aria-labelledby="authTitle">
+          <div class="auth-identity">
+            <img src="assets/staplr-logo.png" alt="Project S.T.A.P.L.R. logo" />
+            <div>
+              <p class="eyebrow">Member access</p>
+              <h1 id="authTitle">Project S.T.A.P.L.R.</h1>
+              <p>Society for Technology Augmentation, Prototyping, Language, and Robotics</p>
+            </div>
+          </div>
+
+          <div class="auth-grid">
+            <form class="auth-card" id="loginForm">
+              <h2>Log In</h2>
+              <label>Username <input name="username" autocomplete="username" required /></label>
+              <label>Password <input name="password" type="password" autocomplete="current-password" required /></label>
+              <button class="primary-action" type="submit">Log in</button>
+              <p class="form-message" id="loginMessage"></p>
+            </form>
+
+            <form class="auth-card" id="signupForm">
+              <h2>Create Account</h2>
+              <label>Username <input name="username" autocomplete="username" required maxlength="28" /></label>
+              <label>Display name <input name="displayName" required maxlength="36" /></label>
+              <label>Password <input name="password" type="password" autocomplete="new-password" required minlength="6" /></label>
+              <button class="secondary-action" type="submit">Request account</button>
+              <p class="form-message" id="signupMessage"></p>
+            </form>
+          </div>
+        </section>
+
+        <div id="dashboardPanel" hidden>
+          <header class="topbar">
+            <div>
+              <p class="eyebrow">Member dashboard</p>
+              <h1>Project S.T.A.P.L.R.</h1>
+              <p class="lede">Track approved builds, shared funds, and project movement from dedicated pages.</p>
+            </div>
+            <div class="topbar-actions">
+              <button class="secondary-action" id="logoutBtn" type="button">Log out</button>
+              <button class="primary-action" id="addProjectBtn" type="button">Submit project</button>
+            </div>
+          </header>
+
+          <section class="page-section active-page" id="page-dashboard" data-page="dashboard">
+            <section class="stats-grid" aria-label="Project S.T.A.P.L.R. summary">
+              <article class="stat-card">
+                <span>Active projects</span>
+                <strong id="activeProjectCount">0</strong>
+                <small id="completedProjectCount">0 completed</small>
+              </article>
+              <article class="stat-card">
+                <span>Available funds</span>
+                <strong id="availableFunds">$0</strong>
+                <small id="fundingLogCount">0 funding records</small>
+              </article>
+              <article class="stat-card">
+                <span>Next deadline</span>
+                <strong id="nextDeadline">--</strong>
+                <small id="nextDeadlineProject">No milestone</small>
+              </article>
+              <article class="stat-card">
+                <span>Pending approvals</span>
+                <strong id="pendingProjectCount">0</strong>
+                <small>Projects waiting on admin</small>
+              </article>
+            </section>
+          </section>
+
+          <section class="page-section" id="page-projects" data-page="projects">
+            <section class="project-section" aria-labelledby="projectsTitle">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Current work</p>
+                  <h2 id="projectsTitle">Projects</h2>
+                </div>
+                <div class="segmented-control" aria-label="Project filter">
+                  <button class="active" type="button" data-filter="active">Active</button>
+                  <button type="button" data-filter="completed">Completed</button>
+                  <button type="button" data-filter="all">All</button>
+                </div>
+              </div>
+              <div class="empty-state" id="projectEmpty">No approved projects yet.</div>
+              <div class="project-list" id="projectList"></div>
+            </section>
+
+            <section class="project-detail-section" id="projectDetail" aria-labelledby="detailTitle" hidden>
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Project workspace</p>
+                  <h2 id="detailTitle">Select a project</h2>
+                </div>
+                <button class="secondary-action" id="closeDetailBtn" type="button">Close details</button>
+              </div>
+              <div class="detail-grid">
+                <section class="detail-card detail-card-wide">
+                  <div class="detail-header">
+                    <div>
+                      <p class="eyebrow">Project details</p>
+                      <h3 id="detailProjectName">Project name</h3>
+                    </div>
+                    <div class="button-row" id="detailActions"></div>
+                  </div>
+                  <dl class="detail-facts" id="detailFacts"></dl>
+                  <div class="status-strip" id="detailStatusStrip"></div>
+                  <p class="detail-about" id="detailAbout"></p>
+                </section>
+
+                <section class="detail-card">
+                  <h3>Collaborators</h3>
+                  <div class="admin-list" id="collaboratorList"></div>
+                </section>
+
+                <section class="detail-card detail-card-wide">
+                  <h3>Project Funding Parts</h3>
+                  <div class="funding-parts-grid" id="detailFundingParts"></div>
+                </section>
+
+                <section class="detail-card detail-card-wide">
+                  <h3>Project Timeline</h3>
+                  <div class="project-rail-wrap"><div class="project-rail" id="projectTimelineRail"></div></div>
+                  <div class="admin-list" id="stageList"></div>
+                </section>
+
+                <section class="detail-card">
+                  <h3>Update Log</h3>
+                  <form class="stacked-form collaborator-only" id="updateLogForm" hidden>
+                    <label>Update <textarea name="message" rows="3" required maxlength="400"></textarea></label>
+                    <button class="secondary-action" type="submit">Post update</button>
+                  </form>
+                  <div class="admin-list scroll-list" id="updateLogList"></div>
+                </section>
+
+                <section class="detail-card">
+                  <h3>Project Chat</h3>
+                  <div class="chat-list" id="chatList"></div>
+                  <form class="chat-form collaborator-only" id="chatForm" hidden>
+                    <input name="message" placeholder="Message collaborators" required maxlength="260" />
+                    <button class="primary-action" type="submit">Send</button>
+                  </form>
+                </section>
+              </div>
+            </section>
+          </section>
+
+          <section class="page-section" id="page-funding" data-page="funding">
+            <section class="funding-page-grid">
+              <aside class="funds-panel" aria-labelledby="fundsTitle">
+                <div class="section-heading compact">
+                  <div>
+                    <p class="eyebrow">Treasury</p>
+                    <h2 id="fundsTitle">Group Funding</h2>
+                  </div>
+                  <button class="secondary-action" id="openFundingEditorBtn" type="button" hidden>Edit</button>
+                </div>
+                <div class="fund-ring" aria-label="Available budget percentage">
+                  <svg viewBox="0 0 120 120" role="img" aria-labelledby="fundRingTitle">
+                    <title id="fundRingTitle">Available budget</title>
+                    <circle cx="60" cy="60" r="46"></circle>
+                    <circle class="fund-progress" id="fundProgressCircle" cx="60" cy="60" r="46"></circle>
+                  </svg>
+                  <div>
+                    <strong id="fundPercent">0%</strong>
+                    <span>free</span>
+                  </div>
+                </div>
+                <div class="fund-breakdown" id="fundBreakdown"></div>
+                <p class="muted-note" id="fundEmpty">No fund records have been added.</p>
+              </aside>
+
+              <section class="detail-card">
+                <h3>Funding by Project</h3>
+                <div class="funding-parts-grid" id="fundingProjectList"></div>
+              </section>
+
+              <section class="detail-card detail-card-wide">
+                <h3>Public Funding Log</h3>
+                <div class="admin-list" id="fundingLogList"></div>
+              </section>
+            </section>
+          </section>
+
+          <section class="page-section" id="page-timeline" data-page="timeline">
+            <section class="timeline-section" aria-labelledby="timelineTitle">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Milestones</p>
+                  <h2 id="timelineTitle">Global Timeline</h2>
+                </div>
+              </div>
+              <div class="empty-state" id="timelineEmpty">No approved deadlines yet.</div>
+              <div class="timeline-scroll"><div class="global-rail" id="globalTimelineRail"></div></div>
+              <div class="timeline" id="timelineList"></div>
+            </section>
+          </section>
+
+          <section class="page-section" id="page-globalChat" data-page="globalChat">
+            <section class="detail-card">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">All members</p>
+                  <h2>Global Chat</h2>
+                </div>
+              </div>
+              <div class="chat-list global-chat-list" id="globalChatList"></div>
+              <form class="chat-form" id="globalChatForm">
+                <input name="message" placeholder="Message signed-in members" required maxlength="260" />
+                <button class="primary-action" type="submit">Send</button>
+              </form>
+            </section>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <dialog id="projectDialog" aria-labelledby="dialogTitle">
+      <form class="dialog-card" id="projectForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Project request</p>
+            <h2 id="dialogTitle">Submit Project</h2>
+          </div>
+          <button class="icon-button" id="closeProjectDialog" type="button" aria-label="Close dialog">X</button>
+        </div>
+        <label>Project name <input name="name" required maxlength="42" /></label>
+        <label>Lead <input name="lead" required maxlength="28" /></label>
+        <label>Budget needed <input name="budget" type="text" inputmode="decimal" required /></label>
+        <label>Deadline <input name="deadline" type="date" required /></label>
+        <label>Milestone <input name="milestone" required maxlength="90" /></label>
+        <label>About the project <textarea name="about" rows="4" required maxlength="700"></textarea></label>
+        <label>Progress <input name="progress" type="range" min="0" max="100" value="0" /></label>
+        <label>
+          Work status
+          <select name="status">
+            <option>On track</option>
+            <option>At risk</option>
+            <option>Blocked</option>
+          </select>
+        </label>
+        <label>
+          Funding/deadline status
+          <select name="statusFlag">
+            <option>More funding needed</option>
+            <option>Funding goal reached</option>
+            <option>Funding goal critically low</option>
+            <option>Deadline running behind</option>
+          </select>
+        </label>
+        <menu>
+          <button id="cancelProjectDialog" type="button">Cancel</button>
+          <button class="primary-action" type="submit">Submit for approval</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="projectEditorDialog" aria-labelledby="projectEditorTitle">
+      <form class="dialog-card" id="projectEditForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Project manager tools</p>
+            <h2 id="projectEditorTitle">Edit Project</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="projectEditorDialog">X</button>
+        </div>
+        <label>Project name <input name="name" required maxlength="42" /></label>
+        <label>About the project <textarea name="about" rows="4" required maxlength="700"></textarea></label>
+        <label>Date due <input name="deadline" type="date" required /></label>
+        <label>Budget needed <input name="budget" type="text" inputmode="decimal" required /></label>
+        <label>Funds left <input name="fundsLeft" type="text" inputmode="decimal" required /></label>
+        <label>
+          Project status
+          <select name="statusFlag">
+            <option>More funding needed</option>
+            <option>Funding goal reached</option>
+            <option>Funding goal critically low</option>
+            <option>Deadline running behind</option>
+          </select>
+        </label>
+        <section class="dialog-subsection">
+          <h3>Collaborators</h3>
+          <div class="admin-list" id="editorCollaboratorList"></div>
+          <label>Add collaborator <select name="collaborator" id="collaboratorSelect"></select></label>
+          <label class="checkbox-label"><input name="canEdit" type="checkbox" /> Can edit project</label>
+          <button class="secondary-action" type="button" id="addCollaboratorBtn">Add collaborator</button>
+        </section>
+        <section class="dialog-subsection">
+          <h3>Timeline Stages</h3>
+          <div class="admin-list" id="editorStageList"></div>
+          <div class="inline-form">
+            <label>Stage <input name="stageName" maxlength="54" /></label>
+            <label>Date <input name="stageDate" type="date" /></label>
+            <button class="secondary-action" type="button" id="addStageBtn">Add stage</button>
+          </div>
+        </section>
+        <section class="dialog-subsection">
+          <h3>Funding Parts</h3>
+          <div class="admin-list" id="editorFundingPartsList"></div>
+          <div class="inline-form">
+            <label>Part <input name="partName" maxlength="40" /></label>
+            <label>Goal <input name="partGoal" type="text" inputmode="decimal" /></label>
+            <button class="secondary-action" type="button" id="addFundingPartBtn">Add part</button>
+          </div>
+        </section>
+        <menu>
+          <button type="button" data-close-dialog="projectEditorDialog">Cancel</button>
+          <button class="primary-action" type="submit">Save changes</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="completeProjectDialog" aria-labelledby="completeProjectTitle">
+      <form class="dialog-card" id="completeProjectForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Final update</p>
+            <h2 id="completeProjectTitle">Complete Project</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="completeProjectDialog">X</button>
+        </div>
+        <label>Final message <textarea name="message" rows="4" required maxlength="500"></textarea></label>
+        <menu>
+          <button type="button" data-close-dialog="completeProjectDialog">Cancel</button>
+          <button class="primary-action" type="submit">Mark complete</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="fundingEditorDialog" aria-labelledby="fundingEditorTitle">
+      <form class="dialog-card" id="fundingEditorForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Admin funding tools</p>
+            <h2 id="fundingEditorTitle">Edit Funding</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="fundingEditorDialog">X</button>
+        </div>
+        <label>Amount <input name="amount" type="text" inputmode="decimal" required /></label>
+        <label>Reason <input name="reason" required maxlength="90" /></label>
+        <label>Project <select name="projectId" id="fundingProjectSelect"></select></label>
+        <label>Funding part <select name="partId" id="fundingPartSelect"></select></label>
+        <div class="button-row">
+          <button class="primary-action" type="button" data-funding-action="add">+</button>
+          <button class="danger-action" type="button" data-funding-action="subtract">-</button>
+          <button class="secondary-action" type="button" data-funding-action="fund">Fund project</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="adminDialog" aria-labelledby="adminTitle">
+      <div class="dialog-card admin-dialog-card">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Full control</p>
+            <h2 id="adminTitle">Admin Dashboard</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="adminDialog">X</button>
+        </div>
+        <div class="admin-grid">
+          <section class="admin-card" aria-labelledby="accountAdminTitle">
+            <h3 id="accountAdminTitle">Accounts</h3>
+            <div class="admin-list" id="accountList"></div>
+          </section>
+          <section class="admin-card" aria-labelledby="projectAdminTitle">
+            <h3 id="projectAdminTitle">Project Approvals</h3>
+            <div class="admin-list" id="approvalList"></div>
+          </section>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
