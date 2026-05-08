@@ -23,6 +23,10 @@
         </a>
 
         <nav class="nav-list" aria-label="Main sections">
+          <button class="active" type="button" data-page-link="about">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M11 17h2v-6h-2v6Zm0-8h2V7h-2v2Zm1-7a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z" /></svg>
+            About Us
+          </button>
           <button class="active" type="button" data-page-link="dashboard">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-5H4v5Zm10-11h6V4h-6v5Z" /></svg>
             Dashboard
@@ -47,6 +51,10 @@
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.05 3.41 9.76 8 11 4.59-1.24 8-5.95 8-11V5l-8-3Zm0 2.15L18 6.4V11c0 4.05-2.49 7.82-6 8.9-3.51-1.08-6-4.85-6-8.9V6.4l6-2.25Zm-1 4.85h2v4h-2V9Zm0 6h2v2h-2v-2Z" /></svg>
             Admin
           </button>
+          <button type="button" data-notifications-open hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V10a7 7 0 0 0-5-6.7V2h-4v1.3A7 7 0 0 0 5 10v6l-2 2v1h18v-1l-2-2Z" /></svg>
+            Notifications <span class="nav-count" id="notificationCount">0</span>
+          </button>
         </nav>
 
         <section class="side-note" aria-label="Signed in status">
@@ -59,6 +67,32 @@
       </aside>
 
       <main class="main-panel">
+        <section class="about-panel" id="aboutPanel">
+          <div class="auth-identity">
+            <img src="assets/staplr-logo.png" alt="Project S.T.A.P.L.R. logo" />
+            <div>
+              <p class="eyebrow">About us</p>
+              <h1>Project S.T.A.P.L.R.</h1>
+              <p>Project S.T.A.P.L.R. is the Society for Technology Augmentation, Prototyping, Language, and Robotics: a student technology group built around practical invention, shared learning, and ambitious team projects.</p>
+            </div>
+          </div>
+          <section class="about-grid">
+            <article class="detail-card">
+              <h2>What We Build</h2>
+              <p class="muted-note">We work on robotics, software tools, electronics, language systems, fabrication, automation, and experimental prototypes that help members turn ideas into working systems.</p>
+            </article>
+            <article class="detail-card">
+              <h2>How We Work</h2>
+              <p class="muted-note">Members submit projects, form collaborator teams, track timelines, document progress, manage funding needs, and learn by building alongside other motivated creators.</p>
+            </article>
+            <article class="detail-card">
+              <h2>Why Join</h2>
+              <p class="muted-note">S.T.A.P.L.R. is for people who want to explore technology with purpose: design, test, fail, improve, and ship real things together.</p>
+            </article>
+          </section>
+          <button class="primary-action about-join" id="joinTodayBtn" type="button">Join us today</button>
+        </section>
+
         <section class="auth-panel" id="authPanel" aria-labelledby="authTitle">
           <div class="auth-identity">
             <img src="assets/staplr-logo.png" alt="Project S.T.A.P.L.R. logo" />
@@ -90,7 +124,7 @@
         </section>
 
         <div id="dashboardPanel" hidden>
-          <header class="topbar">
+          <header class="topbar" id="mainTopbar">
             <div>
               <p class="eyebrow">Member dashboard</p>
               <h1>Project S.T.A.P.L.R.</h1>
@@ -103,6 +137,24 @@
           </header>
 
           <section class="page-section active-page" id="page-dashboard" data-page="dashboard">
+            <section class="dashboard-overview-grid">
+              <article class="detail-card">
+                <h2>Projects</h2>
+                <p class="muted-note">View active and completed projects, open detailed workspaces, track project managers, collaborators, updates, chats, and funding needs.</p>
+              </article>
+              <article class="detail-card">
+                <h2>Funding</h2>
+                <p class="muted-note">See available group funds, project funding wheels, public funding history, and admin-managed additions, spending, and project distributions.</p>
+              </article>
+              <article class="detail-card">
+                <h2>Timeline</h2>
+                <p class="muted-note">Follow milestones across all approved projects with date-aware dots, late markers, completed stages, and a Today marker.</p>
+              </article>
+              <article class="detail-card">
+                <h2>Communication</h2>
+                <p class="muted-note">Use global chat for all members and project chats for collaborator teams. Project managers can send notifications to collaborators.</p>
+              </article>
+            </section>
             <section class="stats-grid" aria-label="Project S.T.A.P.L.R. summary">
               <article class="stat-card">
                 <span>Active projects</span>
@@ -159,7 +211,7 @@
                       <p class="eyebrow">Project details</p>
                       <h3 id="detailProjectName">Project name</h3>
                     </div>
-                    <div class="button-row" id="detailActions"></div>
+                  <div class="button-row" id="detailActions"></div>
                   </div>
                   <dl class="detail-facts" id="detailFacts"></dl>
                   <div class="status-strip" id="detailStatusStrip"></div>
@@ -188,12 +240,12 @@
                     <label>Update <textarea name="message" rows="3" required maxlength="400"></textarea></label>
                     <button class="secondary-action" type="submit">Post update</button>
                   </form>
-                  <div class="admin-list scroll-list" id="updateLogList"></div>
+                <div class="admin-list scroll-list" id="updateLogList"></div>
                 </section>
 
                 <section class="detail-card">
                   <h3>Project Chat</h3>
-                  <div class="chat-list" id="chatList"></div>
+                <div class="chat-list" id="chatList"></div>
                   <form class="chat-form collaborator-only" id="chatForm" hidden>
                     <input name="message" placeholder="Message collaborators" required maxlength="260" />
                     <button class="primary-action" type="submit">Send</button>
@@ -236,6 +288,10 @@
               <section class="detail-card detail-card-wide">
                 <h3>Public Funding Log</h3>
                 <div class="admin-list" id="fundingLogList"></div>
+                <div class="button-row" id="fundingLogControls" hidden>
+                  <button class="secondary-action" id="expandFundingLogsBtn" type="button">Expand list</button>
+                  <button class="secondary-action" id="toggleFundingDeleteBtn" type="button" hidden>Show delete buttons</button>
+                </div>
               </section>
             </section>
           </section>
@@ -426,6 +482,36 @@
           </section>
         </div>
       </div>
+    </dialog>
+
+    <dialog id="notificationDialog" aria-labelledby="notificationTitle">
+      <div class="dialog-card">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Project alerts</p>
+            <h2 id="notificationTitle">Notifications</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="notificationDialog">X</button>
+        </div>
+        <div class="admin-list scroll-list" id="notificationList"></div>
+      </div>
+    </dialog>
+
+    <dialog id="sendNotificationDialog" aria-labelledby="sendNotificationTitle">
+      <form class="dialog-card" id="sendNotificationForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Project manager</p>
+            <h2 id="sendNotificationTitle">Notify Collaborators</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="sendNotificationDialog">X</button>
+        </div>
+        <label>Message <textarea name="message" rows="4" required maxlength="400"></textarea></label>
+        <menu>
+          <button type="button" data-close-dialog="sendNotificationDialog">Cancel</button>
+          <button class="primary-action" type="submit">Send notification</button>
+        </menu>
+      </form>
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

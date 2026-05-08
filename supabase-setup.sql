@@ -37,6 +37,7 @@ values (
     "funds": { "balance": 0, "logs": [] },
     "projects": [],
     "globalChat": [],
+    "notifications": [],
     "users": [
       {
         "username": "Admin",

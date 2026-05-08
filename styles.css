@@ -100,6 +100,18 @@ svg {
   gap: 8px;
 }
 
+.nav-count {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #10251f;
+  background: var(--green-bright);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
+}
+
 .nav-list a,
 .nav-list button {
   display: flex;
@@ -251,6 +263,27 @@ h3 {
   display: grid;
   gap: 24px;
   align-content: start;
+}
+
+.about-panel {
+  display: grid;
+  gap: 24px;
+  align-content: start;
+}
+
+.about-grid,
+.dashboard-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.about-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.about-join {
+  justify-self: start;
 }
 
 .auth-identity {
@@ -1044,6 +1077,34 @@ textarea {
   background: #fff;
 }
 
+#accountList,
+#approvalList {
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.expanded-log-list {
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.notification-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.notification-open {
+  display: grid;
+  gap: 4px;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
 .admin-item strong,
 .admin-item small {
   display: block;
@@ -1181,7 +1242,9 @@ menu {
   .auth-grid,
   .stats-grid,
   .nav-list,
-  .funding-page-grid {
+  .funding-page-grid,
+  .about-grid,
+  .dashboard-overview-grid {
     grid-template-columns: 1fr;
   }
 

@@ -21,17 +21,21 @@ const initialState = {
       createdAt: new Date().toISOString()
     }
   ],
-  globalChat: []
+  globalChat: [],
+  notifications: []
 };
 
 let state = structuredClone(initialState);
-let activePage = "dashboard";
+let sessionUsername = localStorage.getItem(sessionKey);
+let activePage = sessionUsername ? "dashboard" : "about";
 let activeFilter = "active";
 let selectedProjectId = null;
 let editorProjectId = null;
 let completionProjectId = null;
 let loadingTimer = null;
-let sessionUsername = localStorage.getItem(sessionKey);
+let fundingLogExpanded = false;
+let fundingDeleteMode = false;
+let notificationProjectId = null;
 let supabaseClient = null;
 let cloudEnabled = false;
 let saveQueue = Promise.resolve();
@@ -54,10 +58,20 @@ $("#completeProjectForm").addEventListener("submit", handleCompleteProject);
 $("#updateLogForm").addEventListener("submit", handleAddUpdate);
 $("#chatForm").addEventListener("submit", handleAddChat);
 $("#globalChatForm").addEventListener("submit", handleGlobalChat);
+$("#joinTodayBtn").addEventListener("click", () => showPage("login"));
 $("#openFundingEditorBtn").addEventListener("click", openFundingEditor);
 $("#addCollaboratorBtn").addEventListener("click", handleAddCollaborator);
 $("#addStageBtn").addEventListener("click", handleAddStage);
 $("#addFundingPartBtn").addEventListener("click", handleAddFundingPart);
+$("#expandFundingLogsBtn").addEventListener("click", () => {
+  fundingLogExpanded = !fundingLogExpanded;
+  renderFunds();
+});
+$("#toggleFundingDeleteBtn").addEventListener("click", () => {
+  fundingDeleteMode = !fundingDeleteMode;
+  renderFunds();
+});
+$("#sendNotificationForm").addEventListener("submit", handleSendProjectNotification);
 
 document.querySelectorAll("[data-page-link]").forEach((button) => {
   button.addEventListener("click", (event) => {
@@ -68,6 +82,13 @@ document.querySelectorAll("[data-page-link]").forEach((button) => {
 
 document.querySelectorAll("[data-admin-open]").forEach((button) => {
   button.addEventListener("click", () => $("#adminDialog").showModal());
+});
+
+document.querySelectorAll("[data-notifications-open]").forEach((button) => {
+  button.addEventListener("click", () => {
+    renderNotifications();
+    $("#notificationDialog").showModal();
+  });
 });
 
 document.querySelectorAll("[data-close-dialog]").forEach((button) => {
@@ -143,7 +164,8 @@ function migrateState(saved, persist = true) {
     },
     users: saved.users?.length ? saved.users : structuredClone(initialState.users),
     projects: (saved.projects || []).map(normalizeProject),
-    globalChat: saved.globalChat || []
+    globalChat: saved.globalChat || [],
+    notifications: saved.notifications || []
   };
 
   next.users = next.users.map((user) => ({
@@ -299,7 +321,8 @@ window.addEventListener("pageshow", hideLoading);
 
 async function handleLogin(event) {
   event.preventDefault();
-  const data = new FormData(event.currentTarget);
+  const form = event.currentTarget;
+  const data = new FormData(form);
   const username = data.get("username").trim();
   const password = data.get("password");
   const user = state.users.find((account) => account.username.toLowerCase() === username.toLowerCase());
@@ -315,7 +338,6 @@ async function handleLogin(event) {
     return;
   }
 
-  const form = event.currentTarget;
   showLoading();
   try {
     if (user.passwordHash !== passwordHash) {
@@ -324,6 +346,7 @@ async function handleLogin(event) {
     }
     sessionUsername = user.username;
     localStorage.setItem(sessionKey, sessionUsername);
+    activePage = "dashboard";
     form.reset();
     message.textContent = "";
     render();
@@ -334,7 +357,8 @@ async function handleLogin(event) {
 
 async function handleSignup(event) {
   event.preventDefault();
-  const data = new FormData(event.currentTarget);
+  const form = event.currentTarget;
+  const data = new FormData(form);
   const username = data.get("username").trim();
   const displayNameValue = data.get("displayName").trim();
   const password = data.get("password");
@@ -347,7 +371,7 @@ async function handleSignup(event) {
 
   state.users.push({ username, displayName: displayNameValue, passwordHash: await hashPassword(password), role: "member", approved: false, createdAt: new Date().toISOString() });
   saveState();
-  event.currentTarget.reset();
+  form.reset();
   message.textContent = "Account requested. An admin must approve it before login.";
   renderAdmin();
 }
@@ -356,10 +380,20 @@ function handleLogout() {
   sessionUsername = null;
   localStorage.removeItem(sessionKey);
   selectedProjectId = null;
+  activePage = "about";
   render();
 }
 
 function showPage(page) {
+  if (page === "login") {
+    activePage = "login";
+    $("#aboutPanel").hidden = true;
+    $("#authPanel").hidden = false;
+    $("#dashboardPanel").hidden = true;
+    document.querySelectorAll("[data-page-link]").forEach((button) => button.classList.toggle("active", button.dataset.pageLink === "login"));
+    return;
+  }
+
   activePage = page;
   document.querySelectorAll(".page-section").forEach((section) => section.classList.toggle("active-page", section.dataset.page === page));
   document.querySelectorAll("[data-page-link]").forEach((button) => button.classList.toggle("active", button.dataset.pageLink === page));
@@ -415,12 +449,17 @@ function handleProjectSubmit(event) {
 function render() {
   const user = currentUser();
   const signedIn = Boolean(user);
-  $("#authPanel").hidden = signedIn;
+  $("#aboutPanel").hidden = signedIn || activePage !== "about";
+  $("#authPanel").hidden = signedIn || activePage === "about";
   $("#dashboardPanel").hidden = !signedIn;
   document.querySelectorAll("[data-admin-open]").forEach((button) => button.hidden = !isAdmin());
+  document.querySelectorAll("[data-notifications-open]").forEach((button) => button.hidden = !signedIn);
   $("#openFundingEditorBtn").hidden = !isAdmin();
   $("#sessionName").textContent = signedIn ? user.displayName : "Signed out";
   $("#sessionRole").textContent = signedIn ? `${user.role === "admin" ? "Admin" : "Member"} account` : "Log in to view the dashboard";
+  document.querySelectorAll(".page-section").forEach((section) => section.classList.toggle("active-page", section.dataset.page === activePage));
+  document.querySelectorAll("[data-page-link]").forEach((button) => button.classList.toggle("active", button.dataset.pageLink === activePage));
+  $("#mainTopbar").hidden = activePage !== "dashboard";
   if (!signedIn) return;
 
   renderStats();
@@ -429,6 +468,7 @@ function render() {
   renderTimeline();
   renderProjectDetail();
   renderGlobalChat();
+  renderNotifications();
   renderAdmin();
 }
 
@@ -496,15 +536,22 @@ function renderFunds() {
     `).join("")
     : `<p class="muted-note">No approved projects have funding parts yet.</p>`;
 
+  const visibleLogs = fundingLogExpanded ? state.funds.logs : state.funds.logs.slice(0, 5);
+  $("#fundingLogControls").hidden = state.funds.logs.length <= 5 && !isAdmin();
+  $("#expandFundingLogsBtn").hidden = state.funds.logs.length <= 5;
+  $("#expandFundingLogsBtn").textContent = fundingLogExpanded ? "Collapse list" : "Expand list";
+  $("#toggleFundingDeleteBtn").hidden = !isAdmin() || state.funds.logs.length === 0;
+  $("#toggleFundingDeleteBtn").textContent = fundingDeleteMode ? "Hide delete buttons" : "Show delete buttons";
+  $("#fundingLogList").classList.toggle("expanded-log-list", fundingLogExpanded);
   $("#fundingLogList").innerHTML = state.funds.logs.length
-    ? state.funds.logs.map((log) => `
+    ? visibleLogs.map((log) => `
       <article class="admin-item">
         <div>
           <strong>${log.kind === "subtract" ? "-" : "+"}${currency.format(log.amount)}</strong>
           <small>${escapeHtml(log.reason)} - ${escapeHtml(displayName(log.username))} - ${formatDate(log.createdAt.slice(0, 10))}</small>
           <small>${log.projectId ? escapeHtml(state.projects.find((project) => project.id === log.projectId)?.name || "Deleted project") : "General fund"}</small>
         </div>
-        ${isAdmin() ? `<button class="danger-action" type="button" data-delete-funding-log="${log.id}">Delete log</button>` : ""}
+        ${isAdmin() && fundingDeleteMode ? `<button class="danger-action" type="button" data-delete-funding-log="${log.id}">Delete log</button>` : ""}
       </article>
     `).join("")
     : `<p class="muted-note">No funding logs yet.</p>`;
@@ -576,11 +623,13 @@ function renderProjectDetail() {
   $("#detailAbout").textContent = project.about;
   $("#detailActions").innerHTML = `
     ${canEdit ? `<button class="secondary-action" type="button" data-edit-selected-project>Edit</button>` : ""}
+    ${canManage ? `<button class="secondary-action" type="button" data-notify-selected-project>Notify collaborators</button>` : ""}
     ${canManage && !project.completed ? `<button class="primary-action" type="button" data-complete-selected-project>Complete</button>` : ""}
     ${canManage && project.completed ? `<button class="secondary-action" type="button" data-reactivate-selected-project>Reactivate</button>` : ""}
     ${canManage ? `<button class="danger-action" type="button" data-delete-selected-project>Delete</button>` : ""}
   `;
   $("[data-edit-selected-project]")?.addEventListener("click", () => openProjectEditor(project.id));
+  $("[data-notify-selected-project]")?.addEventListener("click", () => openSendNotification(project.id));
   $("[data-complete-selected-project]")?.addEventListener("click", () => openCompleteProject(project.id));
   $("[data-reactivate-selected-project]")?.addEventListener("click", () => reactivateProject(project.id));
   $("[data-delete-selected-project]")?.addEventListener("click", () => deleteProject(project.id));
@@ -873,6 +922,36 @@ function handleGlobalChat(event) {
   renderGlobalChat();
 }
 
+function openSendNotification(projectId) {
+  notificationProjectId = projectId;
+  $("#sendNotificationForm").reset();
+  $("#sendNotificationDialog").showModal();
+}
+
+function handleSendProjectNotification(event) {
+  event.preventDefault();
+  const project = state.projects.find((item) => item.id === notificationProjectId);
+  if (!canManageProject(project)) return;
+
+  const message = new FormData(event.currentTarget).get("message").trim();
+  const sender = currentUser().username;
+  const recipients = project.collaborators.filter((username) => username !== sender);
+  recipients.forEach((username) => {
+    state.notifications.unshift({
+      id: crypto.randomUUID(),
+      username,
+      projectId: project.id,
+      from: sender,
+      message,
+      createdAt: new Date().toISOString()
+    });
+  });
+  logProject(project, `Notification sent to collaborators: ${message}`);
+  saveState();
+  $("#sendNotificationDialog").close();
+  render();
+}
+
 function renderGlobalChat() {
   $("#globalChatList").innerHTML = state.globalChat.length
     ? state.globalChat.map((msg) => `<article class="chat-message ${msg.username === currentUser().username ? "own-message" : ""}"><strong>${escapeHtml(msg.username)}</strong><p>${escapeHtml(msg.message)}</p><small>${formatDate(msg.createdAt.slice(0, 10))}</small></article>`).join("")
@@ -993,6 +1072,12 @@ function deleteFundingLog(id) {
   render();
 }
 
+function deleteNotification(id) {
+  state.notifications = state.notifications.filter((notification) => !(notification.id === id && notification.username === currentUser()?.username));
+  saveState();
+  renderNotifications();
+}
+
 function completeStage(projectId, stageId) {
   const project = state.projects.find((item) => item.id === projectId);
   if (!canEditProject(project)) return;
@@ -1090,6 +1175,40 @@ function statusBadge(status) {
 function moneyValue(value) {
   const parsed = Number(String(value).replace(/[^0-9.]/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function userNotifications() {
+  return state.notifications.filter((notification) => notification.username === currentUser()?.username);
+}
+
+function renderNotifications() {
+  const notifications = userNotifications();
+  $("#notificationCount").textContent = notifications.length;
+  $("#notificationList").innerHTML = notifications.length
+    ? notifications.map((notification) => {
+      const project = state.projects.find((item) => item.id === notification.projectId);
+      return `
+        <article class="admin-item notification-item">
+          <button class="notification-open" type="button" data-open-notification-project="${notification.projectId}">
+            <strong>${escapeHtml(project?.name || "Project notification")}</strong>
+            <small>From ${escapeHtml(displayName(notification.from))} - ${formatDate(notification.createdAt.slice(0, 10))}</small>
+            <p class="muted-note">${escapeHtml(notification.message)}</p>
+          </button>
+          <button class="danger-action" type="button" data-delete-notification="${notification.id}">Delete</button>
+        </article>
+      `;
+    }).join("")
+    : `<p class="muted-note">No notifications yet.</p>`;
+
+  document.querySelectorAll("[data-open-notification-project]").forEach((button) => {
+    button.addEventListener("click", () => {
+      $("#notificationDialog").close();
+      openProjectDetail(button.dataset.openNotificationProject);
+    });
+  });
+  document.querySelectorAll("[data-delete-notification]").forEach((button) => {
+    button.addEventListener("click", () => deleteNotification(button.dataset.deleteNotification));
+  });
 }
 
 function legacyPasswordHash(value) {
