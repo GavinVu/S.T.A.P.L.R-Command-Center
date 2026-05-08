@@ -1084,6 +1084,19 @@ textarea {
   background: #fff;
 }
 
+.request-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfa;
+}
+
+.request-panel[hidden] {
+  display: none !important;
+}
+
 #accountList,
 #approvalList {
   max-height: 420px;

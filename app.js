@@ -63,6 +63,12 @@ $("#openFundingEditorBtn").addEventListener("click", openFundingEditor);
 $("#addCollaboratorBtn").addEventListener("click", handleAddCollaborator);
 $("#addStageBtn").addEventListener("click", handleAddStage);
 $("#addFundingPartBtn").addEventListener("click", handleAddFundingPart);
+$("#showAccountRequestsBtn").addEventListener("click", () => {
+  $("#accountRequestPanel").hidden = false;
+});
+$("#hideAccountRequestsBtn").addEventListener("click", () => {
+  $("#accountRequestPanel").hidden = true;
+});
 $("#expandFundingLogsBtn").addEventListener("click", () => {
   fundingLogExpanded = !fundingLogExpanded;
   renderFunds();
@@ -970,19 +976,31 @@ function renderAdmin() {
 }
 
 function renderAccountAdmin() {
-  $("#accountList").innerHTML = state.users.map((user) => `
+  const approvedUsers = state.users.filter((user) => user.approved);
+  const pendingUsers = state.users.filter((user) => !user.approved);
+  $("#accountRequestCount").textContent = pendingUsers.length;
+  $("#accountList").innerHTML = approvedUsers.map((user) => `
     <article class="admin-item">
-      <div><strong>${escapeHtml(user.displayName)}</strong><small>${escapeHtml(user.username)} - ${user.approved ? user.role : "pending approval"}</small></div>
+      <div><strong>${escapeHtml(user.displayName)}</strong><small>${escapeHtml(user.username)} - ${user.role}</small></div>
       <div class="button-row">
-        ${!user.approved ? `<button type="button" data-approve-user="${user.username}">Approve</button>` : ""}
         ${user.username !== adminUsername ? `<button type="button" data-toggle-admin="${user.username}">${user.role === "admin" ? "Remove admin" : "Make admin"}</button>` : ""}
         ${user.username !== adminUsername ? `<button class="danger-action" type="button" data-delete-user="${user.username}">Delete</button>` : ""}
       </div>
     </article>
-  `).join("");
+  `).join("") || `<p class="muted-note">No approved accounts yet.</p>`;
+  $("#accountRequestList").innerHTML = pendingUsers.map((user) => `
+    <article class="admin-item">
+      <div><strong>${escapeHtml(user.displayName)}</strong><small>${escapeHtml(user.username)} - waiting for approval</small></div>
+      <div class="button-row">
+        <button type="button" data-approve-user="${user.username}">Approve</button>
+        <button class="danger-action" type="button" data-deny-user="${user.username}">Deny</button>
+      </div>
+    </article>
+  `).join("") || `<p class="muted-note">No account requests are waiting.</p>`;
   document.querySelectorAll("[data-approve-user]").forEach((button) => button.addEventListener("click", () => approveUser(button.dataset.approveUser)));
   document.querySelectorAll("[data-toggle-admin]").forEach((button) => button.addEventListener("click", () => toggleAdmin(button.dataset.toggleAdmin)));
   document.querySelectorAll("[data-delete-user]").forEach((button) => button.addEventListener("click", () => deleteUser(button.dataset.deleteUser)));
+  document.querySelectorAll("[data-deny-user]").forEach((button) => button.addEventListener("click", () => denyUser(button.dataset.denyUser)));
 }
 
 function renderProjectAdmin() {
@@ -998,6 +1016,14 @@ function approveUser(username) {
   const user = state.users.find((account) => account.username === username);
   if (!user || !isAdmin()) return;
   user.approved = true;
+  saveState();
+  render();
+}
+
+function denyUser(username) {
+  const user = state.users.find((account) => account.username === username);
+  if (!user || !isAdmin() || user.approved || username === adminUsername) return;
+  state.users = state.users.filter((account) => account.username !== username);
   saveState();
   render();
 }

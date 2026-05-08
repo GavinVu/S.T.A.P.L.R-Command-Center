@@ -477,8 +477,18 @@
         </div>
         <div class="admin-grid">
           <section class="admin-card" aria-labelledby="accountAdminTitle">
-            <h3 id="accountAdminTitle">Accounts</h3>
+            <div class="section-heading compact">
+              <h3 id="accountAdminTitle">Accounts</h3>
+              <button class="secondary-action" id="showAccountRequestsBtn" type="button">Account requests <span id="accountRequestCount">0</span></button>
+            </div>
             <div class="admin-list" id="accountList"></div>
+            <div class="request-panel" id="accountRequestPanel" hidden>
+              <div class="section-heading compact">
+                <h3>Pending Requests</h3>
+                <button class="secondary-action" id="hideAccountRequestsBtn" type="button">Close</button>
+              </div>
+              <div class="admin-list" id="accountRequestList"></div>
+            </div>
           </section>
           <section class="admin-card" aria-labelledby="projectAdminTitle">
             <h3 id="projectAdminTitle">Project Approvals</h3>
