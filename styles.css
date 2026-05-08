@@ -286,6 +286,13 @@ h3 {
   justify-self: start;
 }
 
+.dashboard-fact {
+  display: block;
+  margin-top: 14px;
+  color: var(--green-dark);
+  font-size: 1rem;
+}
+
 .auth-identity {
   display: grid;
   grid-template-columns: 164px minmax(0, 1fr);

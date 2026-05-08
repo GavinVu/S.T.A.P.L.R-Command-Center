@@ -449,9 +449,9 @@ function handleProjectSubmit(event) {
 function render() {
   const user = currentUser();
   const signedIn = Boolean(user);
-  $("#aboutPanel").hidden = signedIn || activePage !== "about";
-  $("#authPanel").hidden = signedIn || activePage === "about";
-  $("#dashboardPanel").hidden = !signedIn;
+  $("#aboutPanel").hidden = activePage !== "about";
+  $("#authPanel").hidden = signedIn || activePage !== "login";
+  $("#dashboardPanel").hidden = !signedIn || activePage === "about";
   document.querySelectorAll("[data-admin-open]").forEach((button) => button.hidden = !isAdmin());
   document.querySelectorAll("[data-notifications-open]").forEach((button) => button.hidden = !signedIn);
   $("#openFundingEditorBtn").hidden = !isAdmin();
@@ -459,7 +459,7 @@ function render() {
   $("#sessionRole").textContent = signedIn ? `${user.role === "admin" ? "Admin" : "Member"} account` : "Log in to view the dashboard";
   document.querySelectorAll(".page-section").forEach((section) => section.classList.toggle("active-page", section.dataset.page === activePage));
   document.querySelectorAll("[data-page-link]").forEach((button) => button.classList.toggle("active", button.dataset.pageLink === activePage));
-  $("#mainTopbar").hidden = activePage !== "dashboard";
+  $("#mainTopbar").hidden = !signedIn || activePage !== "dashboard";
   if (!signedIn) return;
 
   renderStats();
@@ -474,6 +474,7 @@ function render() {
 
 function renderStats() {
   const next = nextTimelineProject(activeProjects());
+  const notifications = userNotifications().length;
   $("#activeProjectCount").textContent = activeProjects().length;
   $("#completedProjectCount").textContent = `${completedProjects().length} completed`;
   $("#availableFunds").textContent = currency.format(state.funds.balance);
@@ -481,6 +482,10 @@ function renderStats() {
   $("#pendingProjectCount").textContent = pendingProjects().length;
   $("#nextDeadline").textContent = next ? formatDate(next.date) : "--";
   $("#nextDeadlineProject").textContent = next ? next.project.name : "No milestone";
+  $("#dashboardProjectSummary").textContent = `${activeProjects().length} active, ${completedProjects().length} completed`;
+  $("#dashboardFundingSummary").textContent = `${currency.format(state.funds.balance)} available, ${state.funds.logs.length} log entries`;
+  $("#dashboardTimelineSummary").textContent = next ? `${next.project.name}: ${formatDate(next.date)}` : "No upcoming deadlines";
+  $("#dashboardCommunicationSummary").textContent = `${notifications} notifications, ${state.globalChat.length} global messages`;
 }
 
 function renderProjects() {
