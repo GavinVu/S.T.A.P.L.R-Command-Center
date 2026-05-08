@@ -27,6 +27,7 @@ let activeFilter = "active";
 let selectedProjectId = null;
 let editorProjectId = null;
 let completionProjectId = null;
+let loadingTimer = null;
 
 const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
@@ -205,12 +206,17 @@ function canUseProject(project) {
 }
 
 function showLoading() {
+  clearTimeout(loadingTimer);
   $("#loadingScreen").hidden = false;
+  loadingTimer = setTimeout(hideLoading, 1800);
 }
 
 function hideLoading() {
+  clearTimeout(loadingTimer);
   $("#loadingScreen").hidden = true;
 }
+
+window.addEventListener("pageshow", hideLoading);
 
 function handleLogin(event) {
   event.preventDefault();
@@ -229,15 +235,17 @@ function handleLogin(event) {
     return;
   }
 
+  const form = event.currentTarget;
   showLoading();
-  setTimeout(() => {
+  try {
     state.currentUser = user.username;
     saveState();
-    event.currentTarget.reset();
+    form.reset();
     message.textContent = "";
-    hideLoading();
     render();
-  }, 550);
+  } finally {
+    setTimeout(hideLoading, 250);
+  }
 }
 
 function handleSignup(event) {
