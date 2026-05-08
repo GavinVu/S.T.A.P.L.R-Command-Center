@@ -1,18 +1,21 @@
 const storageKey = "project-staplr-dashboard";
-const appVersion = 4;
+const sessionKey = "project-staplr-session";
+const cloudTable = "staplr_app_state";
+const cloudRowId = 1;
+const appVersion = 5;
 const adminUsername = "Admin";
 const adminPassword = "STAPLRPr0jects!?";
+const adminPasswordHash = "9d698fede474b82f84235487f454e7df7debaf2aa4b4a6e9992d9078b06def5b";
 
 const initialState = {
   version: appVersion,
-  currentUser: null,
   funds: { balance: 0, logs: [] },
   projects: [],
   users: [
     {
       username: adminUsername,
       displayName: "Project S.T.A.P.L.R. Admin",
-      password: adminPassword,
+      passwordHash: adminPasswordHash,
       role: "admin",
       approved: true,
       createdAt: new Date().toISOString()
@@ -21,13 +24,17 @@ const initialState = {
   globalChat: []
 };
 
-let state = loadState();
+let state = structuredClone(initialState);
 let activePage = "dashboard";
 let activeFilter = "active";
 let selectedProjectId = null;
 let editorProjectId = null;
 let completionProjectId = null;
 let loadingTimer = null;
+let sessionUsername = localStorage.getItem(sessionKey);
+let supabaseClient = null;
+let cloudEnabled = false;
+let saveQueue = Promise.resolve();
 
 const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
@@ -81,17 +88,51 @@ document.querySelectorAll("[data-funding-action]").forEach((button) => {
 
 $("#fundingProjectSelect").addEventListener("change", renderFundingPartChoices);
 
-function loadState() {
+async function initializeApp() {
+  showLoading();
+  connectSupabase();
+  state = await loadState();
+  subscribeToCloudChanges();
+  hideLoading();
+  render();
+}
+
+function connectSupabase() {
+  const config = window.STAPLR_SUPABASE_CONFIG || {};
+  const hasConfig = config.url && config.anonKey && !config.url.includes("YOUR-PROJECT-REF") && !config.anonKey.includes("YOUR-SUPABASE");
+  if (!hasConfig || !window.supabase?.createClient) return;
+
+  supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+  cloudEnabled = true;
+}
+
+async function loadState() {
+  if (cloudEnabled) {
+    try {
+      const { data, error } = await supabaseClient
+        .from(cloudTable)
+        .select("data")
+        .eq("id", cloudRowId)
+        .single();
+
+      if (error) throw error;
+      return migrateState(data?.data || initialState, false);
+    } catch (error) {
+      console.warn("Supabase load failed. Falling back to local storage.", error);
+      cloudEnabled = false;
+    }
+  }
+
   const saved = localStorage.getItem(storageKey);
   if (!saved) return structuredClone(initialState);
   try {
-    return migrateState(JSON.parse(saved));
+    return migrateState(JSON.parse(saved), false);
   } catch {
     return structuredClone(initialState);
   }
 }
 
-function migrateState(saved) {
+function migrateState(saved, persist = true) {
   const next = {
     ...structuredClone(initialState),
     ...saved,
@@ -105,8 +146,14 @@ function migrateState(saved) {
     globalChat: saved.globalChat || []
   };
 
+  next.users = next.users.map((user) => ({
+    ...user,
+    passwordHash: user.passwordHash || (user.password ? legacyPasswordHash(user.password) : "")
+  })).map(({ password, ...user }) => user);
+
   if (!next.users.some((user) => user.username === adminUsername)) next.users.unshift(structuredClone(initialState.users[0]));
-  localStorage.setItem(storageKey, JSON.stringify(next));
+  delete next.currentUser;
+  if (persist) persistState(next);
   return next;
 }
 
@@ -154,11 +201,43 @@ function normalizeProject(project) {
 }
 
 function saveState() {
-  localStorage.setItem(storageKey, JSON.stringify(state));
+  persistState(state);
+}
+
+function persistState(value) {
+  const sharedState = { ...value, version: appVersion };
+  delete sharedState.currentUser;
+
+  localStorage.setItem(storageKey, JSON.stringify(sharedState));
+  if (!cloudEnabled) return;
+
+  saveQueue = saveQueue
+    .then(async () => {
+      const { error } = await supabaseClient
+        .from(cloudTable)
+        .upsert({ id: cloudRowId, data: sharedState, updated_at: new Date().toISOString() });
+      if (error) throw error;
+    })
+    .catch((error) => {
+      console.warn("Supabase save failed.", error);
+    });
+}
+
+function subscribeToCloudChanges() {
+  if (!cloudEnabled) return;
+
+  supabaseClient
+    .channel("staplr-app-state")
+    .on("postgres_changes", { event: "*", schema: "public", table: cloudTable, filter: `id=eq.${cloudRowId}` }, (payload) => {
+      if (!payload.new?.data) return;
+      state = migrateState(payload.new.data, false);
+      render();
+    })
+    .subscribe();
 }
 
 function currentUser() {
-  return state.users.find((user) => user.username === state.currentUser) || null;
+  return state.users.find((user) => user.username === sessionUsername) || null;
 }
 
 function isAdmin() {
@@ -218,15 +297,16 @@ function hideLoading() {
 
 window.addEventListener("pageshow", hideLoading);
 
-function handleLogin(event) {
+async function handleLogin(event) {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
   const username = data.get("username").trim();
   const password = data.get("password");
   const user = state.users.find((account) => account.username.toLowerCase() === username.toLowerCase());
   const message = $("#loginMessage");
+  const passwordHash = await hashPassword(password);
 
-  if (!user || user.password !== password) {
+  if (!user || (user.passwordHash !== passwordHash && user.passwordHash !== password)) {
     message.textContent = "Username or password is incorrect.";
     return;
   }
@@ -238,8 +318,12 @@ function handleLogin(event) {
   const form = event.currentTarget;
   showLoading();
   try {
-    state.currentUser = user.username;
-    saveState();
+    if (user.passwordHash !== passwordHash) {
+      user.passwordHash = passwordHash;
+      saveState();
+    }
+    sessionUsername = user.username;
+    localStorage.setItem(sessionKey, sessionUsername);
     form.reset();
     message.textContent = "";
     render();
@@ -248,7 +332,7 @@ function handleLogin(event) {
   }
 }
 
-function handleSignup(event) {
+async function handleSignup(event) {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
   const username = data.get("username").trim();
@@ -261,7 +345,7 @@ function handleSignup(event) {
     return;
   }
 
-  state.users.push({ username, displayName: displayNameValue, password, role: "member", approved: false, createdAt: new Date().toISOString() });
+  state.users.push({ username, displayName: displayNameValue, passwordHash: await hashPassword(password), role: "member", approved: false, createdAt: new Date().toISOString() });
   saveState();
   event.currentTarget.reset();
   message.textContent = "Account requested. An admin must approve it before login.";
@@ -269,9 +353,9 @@ function handleSignup(event) {
 }
 
 function handleLogout() {
-  state.currentUser = null;
+  sessionUsername = null;
+  localStorage.removeItem(sessionKey);
   selectedProjectId = null;
-  saveState();
   render();
 }
 
@@ -1008,8 +1092,17 @@ function moneyValue(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function legacyPasswordHash(value) {
+  return value === adminPassword ? adminPasswordHash : value;
+}
+
+async function hashPassword(value) {
+  const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 function escapeHtml(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
 
-render();
+initializeApp();
