@@ -3,6 +3,7 @@ const sessionKey = "project-staplr-session";
 const cloudTable = "staplr_app_state";
 const cloudRowId = 1;
 const appVersion = 5;
+const chatRetentionMs = 14 * 24 * 60 * 60 * 1000;
 const adminUsername = "Admin";
 const adminPassword = "STAPLRPr0jects!?";
 const adminPasswordHash = "9d698fede474b82f84235487f454e7df7debaf2aa4b4a6e9992d9078b06def5b";
@@ -129,6 +130,7 @@ async function initializeApp() {
   showLoading();
   connectSupabase();
   state = await loadState();
+  const prunedChats = pruneExpiredChats(state);
   if (sessionUsername && !currentUser()) {
     sessionUsername = null;
     localStorage.removeItem(sessionKey);
@@ -138,6 +140,7 @@ async function initializeApp() {
     window.location.hash = "login";
   }
   subscribeToCloudChanges();
+  if (prunedChats) saveState();
   hideLoading();
   render();
 }
@@ -247,6 +250,7 @@ function normalizeProject(project) {
 }
 
 function saveState() {
+  pruneExpiredChats(state);
   persistState(state);
 }
 
@@ -277,6 +281,7 @@ function subscribeToCloudChanges() {
     .on("postgres_changes", { event: "*", schema: "public", table: cloudTable, filter: `id=eq.${cloudRowId}` }, (payload) => {
       if (!payload.new?.data) return;
       state = migrateState(payload.new.data, false);
+      if (pruneExpiredChats(state)) saveState();
       render();
     })
     .subscribe();
@@ -781,10 +786,12 @@ function renderUpdateLog(project, canUse) {
 }
 
 function renderProjectChat(project, canUse) {
+  const chatList = $("#chatList");
   $("#chatForm").hidden = !canUse || project.completed;
-  $("#chatList").innerHTML = project.chat.length
+  chatList.innerHTML = project.chat.length
     ? project.chat.map((msg) => `<article class="chat-message ${msg.username === currentUser().username ? "own-message" : ""}"><strong>${escapeHtml(msg.username)}</strong><p>${escapeHtml(msg.message)}</p><small>${formatDate(msg.createdAt.slice(0, 10))}</small></article>`).join("")
     : `<p class="muted-note">No chat messages yet.</p>`;
+  scrollChatToBottom(chatList);
 }
 
 function openProjectDetail(projectId) {
@@ -1032,9 +1039,11 @@ function handleSendProjectNotification(event) {
 }
 
 function renderGlobalChat() {
-  $("#globalChatList").innerHTML = state.globalChat.length
+  const chatList = $("#globalChatList");
+  chatList.innerHTML = state.globalChat.length
     ? state.globalChat.map((msg) => `<article class="chat-message ${msg.username === currentUser().username ? "own-message" : ""}"><strong>${escapeHtml(msg.username)}</strong><p>${escapeHtml(msg.message)}</p><small>${formatDate(msg.createdAt.slice(0, 10))}</small></article>`).join("")
     : `<p class="muted-note">No global messages yet.</p>`;
+  scrollChatToBottom(chatList);
 }
 
 function renderAdmin() {
@@ -1278,6 +1287,37 @@ function moneyValue(value) {
 
 function userNotifications() {
   return state.notifications.filter((notification) => notification.username === currentUser()?.username);
+}
+
+function pruneExpiredChats(value) {
+  const cutoff = Date.now() - chatRetentionMs;
+  let changed = false;
+  const keepRecent = (message) => {
+    const createdAt = new Date(message.createdAt).getTime();
+    return Number.isNaN(createdAt) || createdAt >= cutoff;
+  };
+
+  const recentGlobalChat = value.globalChat.filter(keepRecent);
+  if (recentGlobalChat.length !== value.globalChat.length) {
+    value.globalChat = recentGlobalChat;
+    changed = true;
+  }
+
+  value.projects.forEach((project) => {
+    const recentProjectChat = project.chat.filter(keepRecent);
+    if (recentProjectChat.length !== project.chat.length) {
+      project.chat = recentProjectChat;
+      changed = true;
+    }
+  });
+
+  return changed;
+}
+
+function scrollChatToBottom(chatList) {
+  requestAnimationFrame(() => {
+    chatList.scrollTop = chatList.scrollHeight;
+  });
 }
 
 function renderNotifications() {

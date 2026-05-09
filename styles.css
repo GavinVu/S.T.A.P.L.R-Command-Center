@@ -977,9 +977,11 @@ textarea {
 
 .chat-list {
   display: grid;
+  align-content: start;
   gap: 10px;
   max-height: 360px;
   overflow: auto;
+  overflow-x: hidden;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -987,11 +989,14 @@ textarea {
 }
 
 .chat-message {
+  min-width: 0;
   max-width: 88%;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .chat-message.own-message {
@@ -1007,6 +1012,7 @@ textarea {
 
 .chat-message p {
   margin: 4px 0;
+  white-space: pre-wrap;
 }
 
 .chat-message small {
