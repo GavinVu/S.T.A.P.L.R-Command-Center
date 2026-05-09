@@ -27,7 +27,7 @@ const initialState = {
 
 let state = structuredClone(initialState);
 let sessionUsername = localStorage.getItem(sessionKey);
-let activePage = sessionUsername ? "dashboard" : "about";
+let activePage = "about";
 let activeFilter = "active";
 let selectedProjectId = null;
 let editorProjectId = null;
@@ -44,10 +44,20 @@ const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "
 const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
 
 const $ = (selector) => document.querySelector(selector);
+const protectedPages = new Set(["dashboard", "projects", "funding", "timeline", "globalChat"]);
+const publicPages = new Set(["about", "login"]);
+activePage = initialPageFromHash();
+
+function initialPageFromHash() {
+  const page = window.location.hash.replace("#", "");
+  if (publicPages.has(page)) return page;
+  if (protectedPages.has(page)) return sessionUsername ? page : "login";
+  return sessionUsername ? "dashboard" : "about";
+}
 
 $("#loginForm").addEventListener("submit", handleLogin);
 $("#signupForm").addEventListener("submit", handleSignup);
-$("#logoutBtn").addEventListener("click", handleLogout);
+$("#sidebarAuthBtn").addEventListener("click", handleSidebarAuth);
 $("#addProjectBtn").addEventListener("click", openProjectDialog);
 $("#closeProjectDialog").addEventListener("click", closeProjectDialog);
 $("#cancelProjectDialog").addEventListener("click", closeProjectDialog);
@@ -119,6 +129,14 @@ async function initializeApp() {
   showLoading();
   connectSupabase();
   state = await loadState();
+  if (sessionUsername && !currentUser()) {
+    sessionUsername = null;
+    localStorage.removeItem(sessionKey);
+  }
+  if (!currentUser() && protectedPages.has(activePage)) {
+    activePage = "login";
+    window.location.hash = "login";
+  }
   subscribeToCloudChanges();
   hideLoading();
   render();
@@ -264,6 +282,21 @@ function subscribeToCloudChanges() {
     .subscribe();
 }
 
+async function refreshCloudState() {
+  if (!cloudEnabled) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from(cloudTable)
+      .select("data")
+      .eq("id", cloudRowId)
+      .single();
+    if (error) throw error;
+    state = migrateState(data?.data || initialState, false);
+  } catch (error) {
+    console.warn("Supabase refresh failed.", error);
+  }
+}
+
 function currentUser() {
   return state.users.find((user) => user.username === sessionUsername) || null;
 }
@@ -324,6 +357,10 @@ function hideLoading() {
 }
 
 window.addEventListener("pageshow", hideLoading);
+window.addEventListener("hashchange", () => {
+  const page = window.location.hash.replace("#", "");
+  showPage(page || (currentUser() ? "dashboard" : "about"), false);
+});
 
 async function handleLogin(event) {
   event.preventDefault();
@@ -331,8 +368,10 @@ async function handleLogin(event) {
   const data = new FormData(form);
   const username = data.get("username").trim();
   const password = data.get("password");
-  const user = state.users.find((account) => account.username.toLowerCase() === username.toLowerCase());
   const message = $("#loginMessage");
+  message.textContent = "";
+  await refreshCloudState();
+  const user = state.users.find((account) => account.username.toLowerCase() === username.toLowerCase());
   const passwordHash = await hashPassword(password);
 
   if (!user || (user.passwordHash !== passwordHash && user.passwordHash !== password)) {
@@ -353,6 +392,7 @@ async function handleLogin(event) {
     sessionUsername = user.username;
     localStorage.setItem(sessionKey, sessionUsername);
     activePage = "dashboard";
+    window.location.hash = "dashboard";
     form.reset();
     message.textContent = "";
     render();
@@ -387,16 +427,38 @@ function handleLogout() {
   localStorage.removeItem(sessionKey);
   selectedProjectId = null;
   activePage = "about";
+  window.location.hash = "about";
   render();
 }
 
-function showPage(page) {
+function handleSidebarAuth() {
+  if (currentUser()) {
+    handleLogout();
+    return;
+  }
+  showPage("login");
+}
+
+function showPage(page, updateHash = true) {
+  const signedIn = Boolean(currentUser());
+  if (protectedPages.has(page) && !signedIn) page = "login";
+  if (!publicPages.has(page) && !protectedPages.has(page)) page = signedIn ? "dashboard" : "about";
+
   if (page === "login") {
     activePage = "login";
+    document.body.classList.add("signed-out");
+    document.body.classList.remove("signed-in");
     $("#aboutPanel").hidden = true;
     $("#authPanel").hidden = false;
     $("#dashboardPanel").hidden = true;
+    document.querySelectorAll("[data-protected-nav]").forEach((button) => button.hidden = true);
+    document.querySelectorAll("[data-admin-open]").forEach((button) => button.hidden = true);
+    document.querySelectorAll("[data-notifications-open]").forEach((button) => button.hidden = true);
+    $("#sidebarAuthBtn").textContent = "Log in";
+    $("#sessionName").textContent = "Signed out";
+    $("#sessionRole").textContent = "Log in to view the dashboard";
     document.querySelectorAll("[data-page-link]").forEach((button) => button.classList.toggle("active", button.dataset.pageLink === "login"));
+    if (updateHash) window.location.hash = "login";
     return;
   }
 
@@ -404,6 +466,7 @@ function showPage(page) {
   document.querySelectorAll(".page-section").forEach((section) => section.classList.toggle("active-page", section.dataset.page === page));
   document.querySelectorAll("[data-page-link]").forEach((button) => button.classList.toggle("active", button.dataset.pageLink === page));
   if (page !== "projects") selectedProjectId = null;
+  if (updateHash) window.location.hash = page;
   render();
 }
 
@@ -455,11 +518,16 @@ function handleProjectSubmit(event) {
 function render() {
   const user = currentUser();
   const signedIn = Boolean(user);
+  if (!signedIn && protectedPages.has(activePage)) activePage = "login";
+  document.body.classList.toggle("signed-in", signedIn);
+  document.body.classList.toggle("signed-out", !signedIn);
   $("#aboutPanel").hidden = activePage !== "about";
   $("#authPanel").hidden = signedIn || activePage !== "login";
   $("#dashboardPanel").hidden = !signedIn || activePage === "about";
+  document.querySelectorAll("[data-protected-nav]").forEach((button) => button.hidden = !signedIn);
   document.querySelectorAll("[data-admin-open]").forEach((button) => button.hidden = !isAdmin());
   document.querySelectorAll("[data-notifications-open]").forEach((button) => button.hidden = !signedIn);
+  $("#sidebarAuthBtn").textContent = signedIn ? "Sign out" : "Log in";
   $("#openFundingEditorBtn").hidden = !isAdmin();
   $("#sessionName").textContent = signedIn ? user.displayName : "Signed out";
   $("#sessionRole").textContent = signedIn ? `${user.role === "admin" ? "Admin" : "Member"} account` : "Log in to view the dashboard";
